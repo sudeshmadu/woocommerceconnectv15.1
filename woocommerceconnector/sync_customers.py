@@ -5,23 +5,49 @@ import requests.exceptions
 from .woocommerce_requests import get_woocommerce_customers, post_request, put_request
 from .utils import make_woocommerce_log
 
+
+
 def sync_customers():
     woocommerce_customer_list = []
+    
+    # Sync woocommerce customers
     sync_woocommerce_customers(woocommerce_customer_list)
-    frappe.local.form_dict.count_dict["customers"] = len(woocommerce_customer_list)
+    
+    # Initialize count_dict if it doesn't exist
+    if "count_dict" not in frappe.local.form_dict:
+        frappe.local.form_dict["count_dict"] = {}
+    
+    # Store the count of customers
+    frappe.local.form_dict["count_dict"]["customers"] = len(woocommerce_customer_list)
+
+
 
 def sync_woocommerce_customers(woocommerce_customer_list):
     for woocommerce_customer in get_woocommerce_customers():
-        # import new customer or update existing customer
+        # Check if customer exists in Frappe
         if not frappe.db.get_value("Customer", {"woocommerce_customer_id": woocommerce_customer.get('id')}, "name"):
-            #only synch customers with address
-            if woocommerce_customer.get("billing").get("address_1") != "" and woocommerce_customer.get("shipping").get("address_1") != "":
+            # Check if both billing and shipping addresses exist and are non-empty
+            billing_address = woocommerce_customer.get("billing", {}).get("address_1", "")
+            shipping_address = woocommerce_customer.get("shipping", {}).get("address_1", "")
+            
+            if billing_address and shipping_address:
+                # Create a new customer in Frappe
                 create_customer(woocommerce_customer, woocommerce_customer_list)
-            # else:
-            #    make_woocommerce_log(title="customer without address", status="Error", method="create_customer",
-            #        message= "customer without address found",request_data=woocommerce_customer, exception=False)
+            else:
+                # Log an error for customers without addresses
+                make_woocommerce_log(
+                    title="Customer without address",
+                    status="Error",
+                    method="create_customer",
+                    message="Customer without billing or shipping address found",
+                    request_data=woocommerce_customer,
+                    exception=False
+                )
         else:
+            # Update the existing customer in Frappe
             update_customer(woocommerce_customer)
+
+
 
 def update_customer(woocommerce_customer):
     return
