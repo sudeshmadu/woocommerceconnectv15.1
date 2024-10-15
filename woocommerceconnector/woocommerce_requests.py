@@ -238,19 +238,37 @@ def get_woocommerce_orders(order_status):
 
     return woocommerce_orders
 
+
+
 def get_woocommerce_customers(ignore_filter_conditions=False):
     woocommerce_customers = []
-
     filter_condition = ''
 
+    _per_page = 100  # Example value for the number of customers per page
+    
     if not ignore_filter_conditions:
         filter_condition = get_filtering_condition()
 
-        response = get_request_request('customers?per_page={0}&{1}'.format(_per_page,filter_condition))
+    # Initial request (first page)
+    response = get_request_request('customers?per_page={0}&{1}'.format(_per_page, filter_condition))
+    
+    if response.status_code == 200:
         woocommerce_customers.extend(response.json())
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+        return []
 
-        for page_idx in range(1, int( response.headers.get('X-WP-TotalPages')) or 1):
-            response = get_request_request('customers?per_page={0}&page={1}&{2}'.format(_per_page,page_idx+1,filter_condition))
+    # Get total number of pages from the headers
+    total_pages = int(response.headers.get('X-WP-TotalPages', 1))
+
+    # Fetch subsequent pages
+    for page_idx in range(2, total_pages + 1):  # Start from page 2 to avoid duplication
+        response = get_request_request('customers?per_page={0}&page={1}&{2}'.format(_per_page, page_idx, filter_condition))
+        
+        if response.status_code == 200:
             woocommerce_customers.extend(response.json())
+        else:
+            print(f"Error on page {page_idx}: {response.status_code} - {response.text}")
+            break
 
     return woocommerce_customers
