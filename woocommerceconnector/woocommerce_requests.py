@@ -175,17 +175,11 @@ def get_woocommerce_items(ignore_filter_conditions=False):
     response = get_request_request('products?per_page={0}&{1}'.format(_per_page,filter_condition) )
     woocommerce_products.extend(response.json())
 
-
-total_pages = int(total_pages) if total_pages and total_pages.isdigit() else 1
-
-for page_idx in range(1, total_pages + 1):
-    
-    
-    for page_idx in range(1, int( response.headers.get('X-WP-TotalPages')) or 1):
+for page_idx in range(1, int( response.headers.get('X-WP-TotalPages')) or 1):
         response = get_request_request('products?per_page={0}&page={1}&{2}'.format(_per_page,page_idx+1,filter_condition) )
         woocommerce_products.extend(response.json())
 
-
+    return woocommerce_products
 
 def get_woocommerce_item_variants(woocommerce_product_id):
     woocommerce_product_variants = []
