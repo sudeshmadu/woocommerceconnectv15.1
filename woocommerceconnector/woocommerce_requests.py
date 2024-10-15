@@ -185,7 +185,7 @@ for page_idx in range(1, total_pages + 1):
         response = get_request_request('products?per_page={0}&page={1}&{2}'.format(_per_page,page_idx+1,filter_condition) )
         woocommerce_products.extend(response.json())
 
-    return woocommerce_products
+
 
 def get_woocommerce_item_variants(woocommerce_product_id):
     woocommerce_product_variants = []
