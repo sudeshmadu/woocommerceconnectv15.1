@@ -177,7 +177,15 @@ def get_woocommerce_items(ignore_filter_conditions=False):
 
 for page_idx in range(1, int( response.headers.get('X-WP-TotalPages')) or 1):
         response = get_request_request('products?per_page={0}&page={1}&{2}'.format(_per_page,page_idx,filter_condition) )
-        woocommerce_products.extend(response.json())
+        
+    if response.status_code == 200:
+            # Extend the products list with the response data
+            woocommerce_products.extend(response.json())
+        else:
+            # Log or raise an error in case of a failed request
+            print(f"Failed to fetch page {page_idx}, status code: {response.status_code}")
+            # Optionally, handle the failure (e.g., retry logic or breaking the loop)
+            break
 
     return woocommerce_products
 
