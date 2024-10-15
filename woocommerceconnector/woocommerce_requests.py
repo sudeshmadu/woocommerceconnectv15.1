@@ -175,9 +175,7 @@ def get_woocommerce_items(ignore_filter_conditions=False):
     response = get_request_request('products?per_page={0}&{1}'.format(_per_page,filter_condition) )
     woocommerce_products.extend(response.json())
 
-  total_pages = response.headers.get('X-WP-TotalPages')
 
-# Set to 1 if the header is None or can't be converted to int
 total_pages = int(total_pages) if total_pages and total_pages.isdigit() else 1
 
 for page_idx in range(1, total_pages + 1):
