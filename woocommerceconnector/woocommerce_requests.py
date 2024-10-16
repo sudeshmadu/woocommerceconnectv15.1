@@ -163,43 +163,23 @@ def get_filtering_condition():
 def get_country():
     return get_request('/admin/countries.json')['countries']
 
-
-
-
 def get_woocommerce_items(ignore_filter_conditions=False):
     woocommerce_products = []
 
-    # Construct filter condition if required
     filter_condition = ''
     if not ignore_filter_conditions:
         filter_condition = get_filtering_condition()
         if cint(frappe.get_value("WooCommerce Config", "WooCommerce Config", "sync_only_published")) == 1:
             filter_condition += "&status=publish"
 
-    # Fetch the first page of products and check for the total number of pages
-    response = get_request_request('products?per_page={0}&{1}'.format(_per_page, filter_condition))
-    
-    # Check for a successful response
-    if response.status_code == 200:
-        woocommerce_products.extend(response.json())
-        
-        # Get the total number of pages from the headers (handle missing or invalid headers)
-        total_pages = response.headers.get('X-WP-TotalPages')
-        total_pages = int(total_pages) if total_pages and total_pages.isdigit() else 1
+    response = get_request_request('products?per_page={0}&{1}'.format(_per_page,filter_condition) )
+    woocommerce_products.extend(response.json())
 
-        # Loop through the remaining pages (if there are any)
-        for page_idx in range(2, total_pages + 1):  # Start from page 2 because page 1 is already fetched
-            response = get_request_request('products?per_page={0}&page={1}&{2}'.format(_per_page, page_idx, filter_condition))
-            if response.status_code == 200:
-                woocommerce_products.extend(response.json())
-            else:
-                print(f"Failed to fetch page {page_idx}, status code: {response.status_code}")
-                break  # Optionally, you could retry or log the error
-    else:
-        print(f"Failed to fetch the first page, status code: {response.status_code}")
+    for page_idx in range(1, int( response.headers.get('X-WP-TotalPages')) or 1):
+        response = get_request_request('products?per_page={0}&page={1}&{2}'.format(_per_page,page_idx+1,filter_condition) )
+        woocommerce_products.extend(response.json())
 
     return woocommerce_products
-
 
 def get_woocommerce_item_variants(woocommerce_product_id):
     woocommerce_product_variants = []
@@ -238,37 +218,19 @@ def get_woocommerce_orders(order_status):
 
     return woocommerce_orders
 
-
-
 def get_woocommerce_customers(ignore_filter_conditions=False):
     woocommerce_customers = []
+
     filter_condition = ''
 
-    _per_page = 100  # Example value for the number of customers per page
-    
     if not ignore_filter_conditions:
         filter_condition = get_filtering_condition()
 
-    # Initial request (first page)
-    response = get_request_request('customers?per_page={0}&{1}'.format(_per_page, filter_condition))
-    
-    if response.status_code == 200:
+        response = get_request_request('customers?per_page={0}&{1}'.format(_per_page,filter_condition))
         woocommerce_customers.extend(response.json())
-    else:
-        print(f"Error: {response.status_code} - {response.text}")
-        return []
 
-    # Get total number of pages from the headers
-    total_pages = int(response.headers.get('X-WP-TotalPages', 1))
-
-    # Fetch subsequent pages
-    for page_idx in range(2, total_pages + 1):  # Start from page 2 to avoid duplication
-        response = get_request_request('customers?per_page={0}&page={1}&{2}'.format(_per_page, page_idx, filter_condition))
-        
-        if response.status_code == 200:
+        for page_idx in range(1, int( response.headers.get('X-WP-TotalPages')) or 1):
+            response = get_request_request('customers?per_page={0}&page={1}&{2}'.format(_per_page,page_idx+1,filter_condition))
             woocommerce_customers.extend(response.json())
-        else:
-            print(f"Error on page {page_idx}: {response.status_code} - {response.text}")
-            break
 
     return woocommerce_customers
