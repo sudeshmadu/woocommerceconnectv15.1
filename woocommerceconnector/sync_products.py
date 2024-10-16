@@ -390,43 +390,22 @@ def get_item_details(woocommerce_item):
             ["name", "stock_uom", "item_name"], as_dict=1)
         return item_details
 
-
-
 def sync_erpnext_items(price_list, warehouse, woocommerce_item_list):
-    # No need to reinitialize woocommerce_item_list if it's already passed as an argument
+    woocommerce_item_list = {}
     for item in get_woocommerce_items():
-        # Ensure 'id' exists in the item before accessing it
-        if 'id' in item:
-            woocommerce_item_list[int(item['id'])] = item
+        woocommerce_item_list[int(item['id'])] = item
 
     for item in get_erpnext_items(price_list):
         try:
-            # Safely get 'woocommerce_product_id' from the item
-            woocommerce_product = woocommerce_item_list.get(item.get('woocommerce_product_id'))
-
-            sync_item_with_woocommerce(item, price_list, warehouse, woocommerce_product)
+            sync_item_with_woocommerce(item, price_list, warehouse, woocommerce_item_list.get(item.get('woocommerce_product_id')))
             frappe.local.form_dict.count_dict["products"] += 1
 
-        except woocommerceError as e:  # Ensure this exception is defined/imported
-            make_woocommerce_log(
-                title="{0}".format(e), 
-                status="Error", 
-                method="sync_woocommerce_items", 
-                message=frappe.get_traceback(),
-                request_data=item, 
-                exception=True
-            )
+        except woocommerceError as e:
+            make_woocommerce_log(title="{0}".format(e), status="Error", method="sync_woocommerce_items", message=frappe.get_traceback(),
+                request_data=item, exception=True)
         except Exception as e:
-            make_woocommerce_log(
-                title="{0}".format(e), 
-                status="Error", 
-                method="sync_woocommerce_items", 
-                message=frappe.get_traceback(),
-                request_data=item, 
-                exception=True
-            )
-
-
+            make_woocommerce_log(title="{0}".format(e), status="Error", method="sync_woocommerce_items", message=frappe.get_traceback(),
+                request_data=item, exception=True)
 
 def get_erpnext_items(price_list):
     erpnext_items = []
